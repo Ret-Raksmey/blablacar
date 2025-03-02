@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../../../model/ride/locations.dart';
 import '../../../model/ride_pref/ride_pref.dart';
 import '../../../theme/theme.dart';
+import '../../../dummy_data/dummy_data.dart';  // Import dummy data
 
 class RidePrefForm extends StatefulWidget {
   final RidePref? initRidePref;
@@ -19,6 +20,10 @@ class _RidePrefFormState extends State<RidePrefForm> {
   DateTime departureDate = DateTime.now();
   Location arrival = const Location(name: 'Bordeaux', country: Country.france);
   int requestedSeats = 1;
+  
+  // Controller for the search fields
+  final TextEditingController _departureSearchController = TextEditingController();
+  final TextEditingController _arrivalSearchController = TextEditingController();
 
   @override
   void initState() {
@@ -29,14 +34,55 @@ class _RidePrefFormState extends State<RidePrefForm> {
       departureDate = widget.initRidePref!.departureDate;
       requestedSeats = widget.initRidePref!.requestedSeats;
     }
+    
+    // Initialize controllers with current values
+    _departureSearchController.text = departure.name;
+    _arrivalSearchController.text = arrival.name;
+  }
+  
+  @override
+  void dispose() {
+    _departureSearchController.dispose();
+    _arrivalSearchController.dispose();
+    super.dispose();
   }
 
   void _selectDeparture() async {
-    // Logic to select departure location
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => LocationSearchScreen(
+          initialQuery: departure.name,
+          title: 'Leaving from',
+        ),
+      ),
+    );
+    
+    if (result != null && result is Location) {
+      setState(() {
+        departure = result;
+        _departureSearchController.text = departure.name;
+      });
+    }
   }
 
   void _selectArrival() async {
-    // Logic to select arrival location
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => LocationSearchScreen(
+          initialQuery: arrival.name,
+          title: 'Going to',
+        ),
+      ),
+    );
+    
+    if (result != null && result is Location) {
+      setState(() {
+        arrival = result;
+        _arrivalSearchController.text = arrival.name;
+      });
+    }
   }
 
   void _selectDate() async {
@@ -128,6 +174,11 @@ class _RidePrefFormState extends State<RidePrefForm> {
       final temp = departure;
       departure = arrival;
       arrival = temp;
+      
+      // Also swap the text in controllers
+      final tempText = _departureSearchController.text;
+      _departureSearchController.text = _arrivalSearchController.text;
+      _arrivalSearchController.text = tempText;
     });
   }
 
@@ -172,9 +223,15 @@ class _RidePrefFormState extends State<RidePrefForm> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        departure.name,
-                        style: BlaTextStyles.label,
+                      Row(
+                        children: [
+                          Icon(Icons.circle_outlined, color: BlaColors.neutralLight , size: 20),
+                          SizedBox(width: 8),
+                        g  Text(
+                            departure.name,
+                            style: BlaTextStyles.label,
+                          ),
+                        ],
                       ),
                       IconButton(
                         icon: Icon(Icons.swap_vert, color: BlaColors.primary),
@@ -196,9 +253,15 @@ class _RidePrefFormState extends State<RidePrefForm> {
                       bottom: BorderSide(color: BlaColors.greyLight),
                     ),
                   ),
-                  child: Text(
-                    arrival.name,
-                    style: BlaTextStyles.label,
+                  child: Row(
+                    children: [
+                      Icon(Icons.circle_outlined, color: BlaColors.neutralLight , size: 20),
+                      SizedBox(width: 8),
+                      Text(
+                        arrival.name,
+                        style: BlaTextStyles.label,
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -215,9 +278,15 @@ class _RidePrefFormState extends State<RidePrefForm> {
                       bottom: BorderSide(color: BlaColors.greyLight),
                     ),
                   ),
-                  child: Text(
-                    DateFormat('EEE d MMM').format(departureDate),
-                    style: BlaTextStyles.label,
+                  child: Row(
+                    children: [
+                      Icon(Icons.calendar_today, color: BlaColors.neutralLight , size: 20),
+                      SizedBox(width: 8),
+                      Text(
+                        DateFormat('EEE d MMM').format(departureDate),
+                        style: BlaTextStyles.label,
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -233,13 +302,19 @@ class _RidePrefFormState extends State<RidePrefForm> {
                       bottom: BorderSide(color: BlaColors.greyLight),
                     ),
                   ),
-                  child: Text(
-                    'Number of seats: $requestedSeats',
-                    style: BlaTextStyles.label,
+                  child: Row(
+                    children: [
+                      Icon(Icons.person, color: BlaColors.neutralLight , size: 20),
+                      SizedBox(width: 8),
+                      Text(
+                        '$requestedSeats',
+                        style: BlaTextStyles.label,
+                      ),
+                    ],
                   ),
                 ),
               ),
-              const SizedBox(height: BlaSpacings.s),
+              const SizedBox(height: BlaSpacings.m),
 
               // Submit Button
               ElevatedButton(
@@ -251,11 +326,171 @@ class _RidePrefFormState extends State<RidePrefForm> {
                   backgroundColor: BlaColors.primary,
                   padding: const EdgeInsets.all(12),
                 ),
-                child: Text('Search'),
+                child: Text('Search', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
               ),
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+// Location search screen using fakeLocations from dummy_data.dart
+class LocationSearchScreen extends StatefulWidget {
+  final String initialQuery;
+  final String title;
+
+  const LocationSearchScreen({
+    Key? key,
+    required this.initialQuery,
+    required this.title,
+  }) : super(key: key);
+
+  @override
+  _LocationSearchScreenState createState() => _LocationSearchScreenState();
+}
+
+class _LocationSearchScreenState extends State<LocationSearchScreen> {
+  late TextEditingController _searchController;
+  List<Location> _searchResults = [];
+  bool _isSearching = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _searchController = TextEditingController(text: widget.initialQuery);
+    _performSearch(widget.initialQuery);
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _performSearch(String query) {
+    setState(() {
+      _isSearching = true;
+    });
+
+    // Simulate network delay
+    Future.delayed(Duration(milliseconds: 300), () {
+      if (query.isEmpty) {
+        _searchResults = fakeLocations;
+      } else {
+        _searchResults = fakeLocations
+            .where((location) =>
+                location.name.toLowerCase().contains(query.toLowerCase()))
+            .toList();
+      }
+
+      setState(() {
+        _isSearching = false;
+      });
+    });
+  }
+
+  String _getCountryName(Country country) {
+    switch (country) {
+      case Country.france:
+        return 'France';
+      case Country.uk:
+        return 'United Kingdom';
+      default:
+        return country.toString().split('.').last;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.black,
+        title: Text(widget.title, style: TextStyle(color: Colors.white)),
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: TextField(
+              controller: _searchController,
+              style: TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                hintText: 'Search for a city or station...',
+                hintStyle: TextStyle(color: Colors.grey),
+                prefixIcon: Icon(Icons.search, color: Colors.grey),
+                suffixIcon: _searchController.text.isNotEmpty
+                    ? IconButton(
+                        icon: Icon(Icons.clear, color: Colors.grey),
+                        onPressed: () {
+                          _searchController.clear();
+                          _performSearch('');
+                        },
+                      )
+                    : null,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(color: Colors.grey.shade800),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(color: Colors.grey.shade800),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(color: BlaColors.primary),
+                ),
+                filled: true,
+                fillColor: Colors.grey.shade900,
+              ),
+              onChanged: _performSearch,
+              autofocus: true,
+            ),
+          ),
+          
+          // Current location option
+          ListTile(
+            leading: Icon(Icons.my_location, color: Colors.blue),
+            title: Text('Use current location', style: TextStyle(color: Colors.white)),
+            trailing: Icon(Icons.chevron_right, color: Colors.grey),
+            onTap: () {
+              // In a real app, we would get the current location here
+              Navigator.pop(context, Location(name: 'Current Location', country: Country.france));
+            },
+          ),
+          
+          Divider(color: Colors.grey.shade800),
+          
+          _isSearching
+              ? Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: CircularProgressIndicator(color: BlaColors.primary),
+                )
+              : Expanded(
+                  child: ListView.builder(
+                    itemCount: _searchResults.length,
+                    itemBuilder: (context, index) {
+                      final location = _searchResults[index];
+                      return ListTile(
+                        title: Text(location.name, 
+                            style: TextStyle(color: Colors.white)),
+                        subtitle: Text(
+                            _getCountryName(location.country),
+                            style: TextStyle(color: Colors.grey)),
+                        onTap: () {
+                          Navigator.pop(context, location);
+                        },
+                      );
+                    },
+                  ),
+                ),
+        ],
       ),
     );
   }
