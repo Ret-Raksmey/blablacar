@@ -1,18 +1,18 @@
-import '../../model/ride/locations.dart';
-import '../mock/locations_repository.dart';
+import 'package:week_3_blabla_project/model/ride_pref/ride_pref.dart';
+import 'package:week_3_blabla_project/repository/ride_preferences_repository.dart';
 
+import '../../dummy_data/dummy_data.dart';
 
-class MockLocationsRepository extends LocationsRepository {
-  final Location phnomPenh =
-      Location(name: "Phnom Penh", country: Country.cambodia);
-  final Location siemReap =
-      Location(name: "Siem Reap", country: Country.cambodia);
-  final Location sihanoukville =
-      Location(name: "Sihanoukville", country: Country.cambodia);
-  final Location kampot = Location(name: "Kampot", country: Country.cambodia);
+class MockRidePreferencesRepository extends RidePreferencesRepository {
+  final List<RidePreference> _pastPreferences = fakeRidePrefs;
 
   @override
-  List<Location> getLocations() {
-    return [phnomPenh, siemReap, sihanoukville, kampot];
+  List<RidePreference> getPastPreferences() {
+    return _pastPreferences;
+  }
+
+  @override
+  void addPreference(RidePreference preference) {
+    _pastPreferences.add(preference);
   }
 }
