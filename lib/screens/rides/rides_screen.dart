@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:week_3_blabla_project/screens/rides/widgets/ride_pref_bar.dart';
- 
+import '../rides/widgets/ride_pref_bar.dart';
 import '../../dummy_data/dummy_data.dart';
 import '../../model/ride/ride.dart';
 import '../../model/ride_pref/ride_pref.dart';
@@ -20,53 +19,84 @@ class RidesScreen extends StatefulWidget {
   State<RidesScreen> createState() => _RidesScreenState();
 }
 
+// lib/screens/rides/rides_screen.dart
 class _RidesScreenState extends State<RidesScreen> {
- 
-  RidePreference currentPreference  = fakeRidePrefs[0];   // TODO 1 :  We should get it from the service
+  RidePreference currentPreference = fakeRidePrefs[0];
 
-  List<Ride> get matchingRides => RidesService.getRidesFor(currentPreference);
+  RideFilter selectedFilter = RideFilter.all;
+  RideSortType selectedSortType = RideSortType.departureTime;
 
-  void onBackPressed() {
-    Navigator.of(context).pop();     //  Back to the previous view
-  } 
+  List<Ride> get matchingRides => RidesService.getRidesFor(
+    currentPreference,
+    filter: selectedFilter,
+    sortType: selectedSortType,
+  );
 
-  void onPreferencePressed() async {
-        // TODO  6 : we should push the modal with the current pref
-
-        // TODO 9 :  After pop, we should get the new current pref from the modal 
-
-        // TODO 10 :  Then we should update the service current pref,   and update the view
+  // Add methods to handle filter and sort changes
+  void onFilterChanged(RideFilter filter) {
+    setState(() {
+      selectedFilter = filter;
+    });
   }
 
-  void onFilterPressed() {
+  void onSortChanged(RideSortType sortType) {
+    setState(() {
+      selectedSortType = sortType;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        body: Padding(
-      padding: const EdgeInsets.only(
-          left: BlaSpacings.m, right: BlaSpacings.m, top: BlaSpacings.s),
-      child: Column(
-        children: [
-          // Top search Search bar
-          RidePrefBar(
-              ridePreference: currentPreference,
-              onBackPressed: onBackPressed,
-              onPreferencePressed: onPreferencePressed,
-              onFilterPressed: onFilterPressed),
-
-          Expanded(
-            child: ListView.builder(
-              itemCount: matchingRides.length,
-              itemBuilder: (ctx, index) => RideTile(
-                ride: matchingRides[index],
-                onPressed: () {},
+      body: Padding(
+        padding: const EdgeInsets.all(BlaSpacings.m),
+        child: Column(
+          children: [
+            // Dropdowns or buttons for filtering and sorting
+            Row(
+              children: [
+                DropdownButton<RideFilter>(
+                  value: selectedFilter,
+                  items: RideFilter.values.map((filter) {
+                  return DropdownMenuItem<RideFilter>(
+                    value: filter,
+                    child: Text(filter.toString().split('.').last),
+                  );
+                  }).toList(),
+                  onChanged: (RideFilter? filter) {
+                  if (filter != null) {
+                    onFilterChanged(filter);
+                  }
+                  },
+                ),
+                DropdownButton<RideSortType>(
+                  value: selectedSortType,
+                  items: RideSortType.values.map((sortType) {
+                  return DropdownMenuItem<RideSortType>(
+                    value: sortType,
+                    child: Text(sortType.toString().split('.').last),
+                  );
+                  }).toList(),
+                  onChanged: (RideSortType? sortType) {
+                  if (sortType != null) {
+                    onSortChanged(sortType);
+                  }
+                  },
+                ),
+              ],
+            ),
+            Expanded(
+              child: ListView.builder(
+                itemCount: matchingRides.length,
+                itemBuilder: (ctx, index) => RideTile(
+                  ride: matchingRides[index],
+                  onPressed: () {},
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
-    ));
+    );
   }
 }
