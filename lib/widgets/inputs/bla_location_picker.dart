@@ -17,76 +17,58 @@ class BlaLocationPicker extends StatefulWidget {
   State<BlaLocationPicker> createState() => _BlaLocationPickerState();
 }
 
+
 class _BlaLocationPickerState extends State<BlaLocationPicker> {
   List<Location> filteredLocations = [];
-
-  // ----------------------------------
-  // Initialize the Form attributes
-  // ----------------------------------
 
   @override
   void initState() {
     super.initState();
-
-    if (widget.initLocation != null) {
-      filteredLocations = getLocationsFor(widget.initLocation!.name);
-    }
-  }
-
-  void onBackSelected() {
-    Navigator.of(context).pop();
-  }
-
-  void onLocationSelected(Location location) {
-    Navigator.of(context).pop(location);
+    
+    // Initialize with all available locations
+    filteredLocations = LocationsService.availableLocations;
   }
 
   void onSearchChanged(String searchText) {
-    List<Location> newSelection = [];
-
-    if (searchText.length > 1) {
-      // We start to search from 2 characters only.
-      newSelection = getLocationsFor(searchText);
-    }
-
     setState(() {
-      filteredLocations = newSelection;
+      if (searchText.isEmpty) {
+        // Reset to all locations if search is empty
+        filteredLocations = LocationsService.availableLocations;
+      } else {
+        filteredLocations = LocationsService.availableLocations
+            .where((location) =>
+                location.name.toLowerCase().contains(searchText.toLowerCase()))
+            .toList();
+      }
     });
-  }
-
-  List<Location> getLocationsFor(String text) {
-    return LocationsService.availableLocations
-        .where((location) =>
-            location.name.toUpperCase().contains(text.toUpperCase()))
-        .toList();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        body: Padding(
-      padding: const EdgeInsets.only(
-          left: BlaSpacings.m, right: BlaSpacings.m, top: BlaSpacings.s),
-      child: Column(
-        children: [
-          // Top search Search bar
-          BlaSearchBar(
-            onBackPressed: onBackSelected,
-            onSearchChanged: onSearchChanged,
-          ),
-
-          Expanded(
-            child: ListView.builder(
-              itemCount: filteredLocations.length,
-              itemBuilder: (ctx, index) => LocationTile(
-                location: filteredLocations[index],
-                onSelected: onLocationSelected,
+      body: Padding(
+        padding: const EdgeInsets.all(BlaSpacings.m),
+        child: Column(
+          children: [
+            BlaSearchBar(
+              onBackPressed: () => Navigator.of(context).pop(),
+              onSearchChanged: onSearchChanged,
+            ),
+            Expanded(
+              child: ListView.builder(
+                itemCount: filteredLocations.length,
+                itemBuilder: (ctx, index) => LocationTile(
+                  location: filteredLocations[index],
+                  onSelected: (location) {
+                    Navigator.of(context).pop(location);
+                  },
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
-    ));
+    );
   }
 }
 
